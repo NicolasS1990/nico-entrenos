@@ -396,10 +396,15 @@ alert("Backup importado ✅");
           <ul>
             {weekSessions.map((s) => (
               <li key={s.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <span>
-                  <b>{s.date}</b> — {s.type} — {s.workoutName} — Obj {s.plannedMinutes}’ {s.plannedZone} / Real{" "}
-                  {s.actualMinutes ?? "—"}’ FC {s.hrAvg ?? "—"}
-                </span>
+                <span style={{ display: "block" }}>
+  <b>{s.date}</b> — {s.type} — {s.workoutName} — Obj {s.plannedMinutes}’ {s.plannedZone} / Real{" "}
+  {s.actualMinutes ?? "—"}’ FC {s.hrAvg ?? "—"}
+  {s.notes ? (
+    <div style={{ marginTop: 4, opacity: 0.8 }}>
+      <b>Notas:</b> {s.notes}
+    </div>
+  ) : null}
+</span>
                 <button
                   onClick={() => remove(s.id)}
                   style={{ border: "1px solid #c00", borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}
