@@ -30,6 +30,7 @@ export default function Home() {
     plannedZone: "Z2",
     plannedRpe: 4,
   });
+  const [selectedMonth, setSelectedMonth] = useState(() => todayISO().slice(0, 7)); // "YYYY-MM"
  useEffect(() => {
   if (process.env.NODE_ENV !== "production") return;
   if ("serviceWorker" in navigator) {
@@ -54,15 +55,21 @@ export default function Home() {
 
   // Filtra sesiones que caen dentro de esa semana
   const weekSessions = useMemo(() => {
-    const start = new Date(weekStartISO);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    const endISO = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+  const start = new Date(weekStartISO);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const endISO = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
 
-    return sessions
-      .filter((s) => s.date >= weekStartISO && s.date <= endISO)
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [sessions, weekStartISO]);
+  return sessions
+    .filter((s) => s.date >= weekStartISO && s.date <= endISO)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}, [sessions, weekStartISO]);
+const monthSessions = useMemo(() => {
+  const prefix = selectedMonth + "-"; // "YYYY-MM-"
+  return sessions
+    .filter((s) => s.date.startsWith(prefix))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}, [sessions, selectedMonth]);
 
   const summary = useMemo(() => summarizeWeek(weekSessions), [weekSessions]);
 
@@ -379,8 +386,19 @@ alert("Backup importado ✅");
       </section>
 
       <section style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 12 }}>
-        <h2>Semana (desde {weekStartISO})</h2>
-
+        <h2>Mes seleccionado: {selectedMonth}</h2>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+  <label><b>Mes:</b></label>
+  <input
+    type="month"
+    value={selectedMonth}
+    onChange={(e) => setSelectedMonth(e.target.value)}
+    style={{ padding: 6, borderRadius: 8, border: "1px solid #333" }}
+  />
+  <span style={{ opacity: 0.8 }}>
+    <b>Sesiones en el mes:</b> {monthSessions.length} · <b>Total guardadas:</b> {sessions.length}
+  </span>
+</div>
         <p>
           <b>Semáforo:</b> {summary.light} — <b>Puntaje:</b> {summary.avgScore}
         </p>
@@ -391,21 +409,24 @@ alert("Backup importado ✅");
           <b>Entrenador:</b> {summary.coachMessage}
         </p>
 
-        {weekSessions.length === 0 ? (
-          <p>No hay sesiones guardadas en esta semana.</p>
+        {monthSessions.length === 0 ? (
+          <p>No hay sesiones guardadas en este mes.</p>
         ) : (
           <ul>
-            {weekSessions.map((s) => (
+            {monthSessions.map((s) => (
               <li key={s.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <span style={{ display: "block" }}>
-  <b>{s.date}</b> — {s.type} — {s.workoutName} — Obj {s.plannedMinutes}’ {s.plannedZone} / Real{" "}
-  {s.actualMinutes ?? "—"}’ FC {s.hrAvg ?? "—"}
+                <div style={{ flex: 1 }}>
+  <div>
+    <b>{s.date}</b> — {s.type} — {s.workoutName} — Obj {s.plannedMinutes}’ {s.plannedZone} / Real{" "}
+    {s.actualMinutes ?? "—"}’ FC {s.hrAvg ?? "—"}
+  </div>
+
   {s.notes ? (
     <div style={{ marginTop: 4, opacity: 0.8 }}>
       <b>Notas:</b> {s.notes}
     </div>
   ) : null}
-</span>
+</div>
                 <button
                   onClick={() => remove(s.id)}
                   style={{ border: "1px solid #c00", borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}
