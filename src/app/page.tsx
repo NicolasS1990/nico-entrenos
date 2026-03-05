@@ -24,6 +24,7 @@ const TYPES: WorkoutType[] = ["Rodaje", "Calidad", "Cuestas", "Largo", "Gravel",
 
 export default function Home() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -137,37 +138,54 @@ const monthSessions = useMemo(() => {
       <section style={{ margin: "12px 0", padding: 12, border: "1px solid #ddd", borderRadius: 12 }}>
   {!authed ? (
     <>
-      <b>Sincronización</b>
-      <p style={{ marginTop: 6, opacity: 0.8 }}>
-        Iniciá sesión con tu email (te llega un link). Usá el mismo mail en compu y celu.
-      </p>
+  <b>Sincronización</b>
+  <p style={{ marginTop: 6, opacity: 0.8 }}>
+    Entrá con email y contraseña (esto evita el problema del link que abre Safari).
+  </p>
 
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <input
-          placeholder="tuemail@..."
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{ padding: 10, borderRadius: 10, border: "1px solid #333", minWidth: 240 }}
-        />
-        <button
-          onClick={async () => {
-            setSyncMsg("");
-            const { error } = await supabase.auth.signInWithOtp({
-              email,
-              options: {
-                emailRedirectTo: window.location.origin,
-              },
-            });
-            setSyncMsg(error ? `Error: ${error.message}` : "Listo ✅ Te mandé un link al mail (abrilo en ESTE dispositivo).");
-          }}
-          style={{ padding: 10, borderRadius: 10, border: "1px solid #333", cursor: "pointer" }}
-        >
-          Enviarme link
-        </button>
-      </div>
+  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+    <input
+      placeholder="tuemail@..."
+      value={email}
+      onChange={(e) => setEmail(e.target.value)}
+      style={{ padding: 10, borderRadius: 10, border: "1px solid #333", minWidth: 240 }}
+      autoCapitalize="none"
+      autoCorrect="off"
+    />
 
-      {syncMsg ? <p style={{ marginTop: 8 }}>{syncMsg}</p> : null}
-    </>
+    <input
+      placeholder="contraseña"
+      type="password"
+      value={password}
+      onChange={(e) => setPassword(e.target.value)}
+      style={{ padding: 10, borderRadius: 10, border: "1px solid #333", minWidth: 200 }}
+    />
+
+    <button
+      onClick={async () => {
+        setSyncMsg("");
+        const { error } = await supabase.auth.signUp({ email, password });
+        setSyncMsg(error ? `Error: ${error.message}` : "Listo ✅ Usuario creado. Ahora tocá Entrar.");
+      }}
+      style={{ padding: 10, borderRadius: 10, border: "1px solid #333", cursor: "pointer" }}
+    >
+      Registrarme
+    </button>
+
+    <button
+      onClick={async () => {
+        setSyncMsg("");
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        setSyncMsg(error ? `Error: ${error.message}` : "Entraste ✅");
+      }}
+      style={{ padding: 10, borderRadius: 10, border: "1px solid #333", cursor: "pointer" }}
+    >
+      Entrar
+    </button>
+  </div>
+
+  {syncMsg ? <p style={{ marginTop: 8 }}>{syncMsg}</p> : null}
+</>
   ) : (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
