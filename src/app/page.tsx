@@ -5,6 +5,8 @@ import { listSessions, upsertSession, deleteSession, type Session, type WorkoutT
 import { summarizeWeek } from "@/lib/coach";
 import { TEMPLATES, applyTemplate } from "@/lib/templates";
 import { exportBackup, importBackup } from "@/lib/backup";
+import { supabase } from "@/lib/supabase";
+import { syncNow } from "@/lib/sync";
 
 function uid() {
   return crypto.randomUUID();
@@ -21,6 +23,9 @@ function todayISO() {
 const TYPES: WorkoutType[] = ["Rodaje", "Calidad", "Cuestas", "Largo", "Gravel", "Gimnasio"];
 
 export default function Home() {
+  const [email, setEmail] = useState("");
+  const [authed, setAuthed] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
   const [sessions, setSessions] = useState<Session[]>([]);
   const [form, setForm] = useState<Partial<Session>>({
     date: todayISO(),
@@ -40,6 +45,11 @@ export default function Home() {
   useEffect(() => {
     (async () => setSessions(await listSessions()))();
   }, []);
+  useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => setAuthed(!!data.session));
+  const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setAuthed(!!session));
+  return () => sub.subscription.unsubscribe();
+}, []);
 
   // Calcula el lunes de la semana seleccionada (según la fecha del formulario)
   const weekStartISO = useMemo(() => {
@@ -124,6 +134,73 @@ const monthSessions = useMemo(() => {
   return (
     <main style={{ maxWidth: 900, margin: "0 auto", padding: 16, fontFamily: "system-ui" }}>
       <h1>Diario de entrenamientos (offline)</h1>
+      <section style={{ margin: "12px 0", padding: 12, border: "1px solid #ddd", borderRadius: 12 }}>
+  {!authed ? (
+    <>
+      <b>Sincronización</b>
+      <p style={{ marginTop: 6, opacity: 0.8 }}>
+        Iniciá sesión con tu email (te llega un link). Usá el mismo mail en compu y celu.
+      </p>
+
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <input
+          placeholder="tuemail@..."
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{ padding: 10, borderRadius: 10, border: "1px solid #333", minWidth: 240 }}
+        />
+        <button
+          onClick={async () => {
+            setSyncMsg("");
+            const { error } = await supabase.auth.signInWithOtp({ email });
+            setSyncMsg(error ? `Error: ${error.message}` : "Listo ✅ Te mandé un link al mail (abrilo en ESTE dispositivo).");
+          }}
+          style={{ padding: 10, borderRadius: 10, border: "1px solid #333", cursor: "pointer" }}
+        >
+          Enviarme link
+        </button>
+      </div>
+
+      {syncMsg ? <p style={{ marginTop: 8 }}>{syncMsg}</p> : null}
+    </>
+  ) : (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <b>Sincronización</b>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={async () => {
+              setSyncMsg("Sincronizando...");
+              try {
+                const res = await syncNow();
+                setSyncMsg(`Sync OK ✅ (subí ${res.pushed}, bajé ${res.pulled})`);
+                setSessions(await listSessions());
+              } catch (e: any) {
+                setSyncMsg(`Error: ${e?.message ?? "desconocido"}`);
+              }
+            }}
+            style={{ padding: 10, borderRadius: 10, border: "1px solid #333", cursor: "pointer" }}
+          >
+            Sincronizar ahora
+          </button>
+
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              setSyncMsg("Sesión cerrada.");
+            }}
+            style={{ padding: 10, borderRadius: 10, border: "1px solid #333", cursor: "pointer" }}
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+
+      {syncMsg ? <p style={{ marginTop: 8 }}>{syncMsg}</p> : null}
+    </>
+  )}
+</section>
       <section style={{ display: "flex", gap: 8, margin: "12px 0" }}>
   <button
     onClick={async () => {
