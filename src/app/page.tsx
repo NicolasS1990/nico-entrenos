@@ -152,7 +152,12 @@ const monthSessions = useMemo(() => {
         <button
           onClick={async () => {
             setSyncMsg("");
-            const { error } = await supabase.auth.signInWithOtp({ email });
+            const { error } = await supabase.auth.signInWithOtp({
+              email,
+              options: {
+                emailRedirectTo: window.location.origin,
+              },
+            });
             setSyncMsg(error ? `Error: ${error.message}` : "Listo ✅ Te mandé un link al mail (abrilo en ESTE dispositivo).");
           }}
           style={{ padding: 10, borderRadius: 10, border: "1px solid #333", cursor: "pointer" }}
